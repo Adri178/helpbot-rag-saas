@@ -5,9 +5,10 @@ panduan), dapat chatbot yang menjawab dari dokumen itu — lengkap dengan
 kutipan sumber, dan penolakan jujur kalau jawabannya tidak ada — lalu
 tempel satu baris `<script>` di website mereka.
 
-**Demo:** _(diisi setelah deploy — lihat [plan.md](plan.md) Fase 7)_
+**Demo:** [helpbot-xi.vercel.app](https://helpbot-xi.vercel.app)
 **Coba tanpa daftar:** buka demo di atas, klik bubble chat di pojok kanan
 bawah.
+**Kode sumber:** [github.com/Adri178/helpbot](https://github.com/Adri178/helpbot)
 
 ---
 
