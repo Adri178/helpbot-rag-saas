@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { answerQuestion } from "@/lib/chat/answer";
-import { countRecentMessages, isRateLimited } from "@/lib/chat/rateLimit";
+import {
+  countRecentMessages,
+  countRecentMessagesByIp,
+  isRateLimited,
+  RATE_LIMIT_IP_MAX_MESSAGES,
+} from "@/lib/chat/rateLimit";
 
 const MAX_QUESTION_CHARS = 2000;
 
@@ -13,6 +18,15 @@ const CORS_HEADERS = {
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: CORS_HEADERS });
+}
+
+/** Best-effort client IP from proxy headers (Vercel sets x-forwarded-for).
+ * Returns null if unavailable (e.g. local dev without a proxy in front) —
+ * the IP-based rate limit is simply skipped in that case. */
+function getClientIp(request: Request): string | null {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) return forwardedFor.split(",")[0].trim();
+  return request.headers.get("x-real-ip");
 }
 
 export function OPTIONS() {
@@ -46,6 +60,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient();
+  const ip = getClientIp(request);
 
   const { data: chatbot } = await supabase
     .from("chatbots")
@@ -68,6 +83,22 @@ export async function POST(request: Request) {
     );
   }
 
+  // Second, looser check keyed by IP instead of the client-controlled
+  // visitor_id: catches a visitor who clears localStorage to reset the
+  // per-visitor limit above.
+  if (ip) {
+    const recentByIp = await countRecentMessagesByIp(supabase, {
+      chatbotId,
+      ip,
+    });
+    if (isRateLimited(recentByIp, RATE_LIMIT_IP_MAX_MESSAGES)) {
+      return json(
+        { error: "Terlalu banyak pesan. Coba lagi beberapa menit lagi." },
+        429
+      );
+    }
+  }
+
   // Only trust a client-supplied conversationId if it actually belongs to
   // this chatbot + visitor; otherwise start a fresh one rather than error
   // out (a mismatched id here is more likely stale state than an attack).
@@ -85,7 +116,7 @@ export async function POST(request: Request) {
   if (!conversationId) {
     const { data: conversation, error: convError } = await supabase
       .from("conversations")
-      .insert({ chatbot_id: chatbotId, visitor_id: visitorId })
+      .insert({ chatbot_id: chatbotId, visitor_id: visitorId, ip })
       .select("id")
       .single();
     if (convError || !conversation) {

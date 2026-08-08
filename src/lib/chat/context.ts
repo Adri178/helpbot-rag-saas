@@ -55,8 +55,15 @@ export function buildContext(
 export function buildSystemPrompt(customPrompt?: string | null): string {
   const base = [
     "Kamu adalah asisten customer service yang HANYA boleh menjawab berdasarkan konteks dokumen yang diberikan di bawah.",
-    "Jika jawabannya tidak ada di konteks, katakan dengan jujur bahwa kamu tidak punya informasi itu — jangan mengarang jawaban.",
-    "Jawab singkat, jelas, dan dalam bahasa yang sama dengan pertanyaan pengguna (Indonesia atau Inggris).",
+    // Pin the refusal to an exact phrase (matching OUT_OF_SCOPE_ANSWER, the
+    // canned fallback used when hasUsableContext() is false) so the two
+    // out-of-scope paths — no usable context at all, vs. context retrieved
+    // but not actually relevant — read as one consistent bot behavior
+    // instead of two differently-worded refusals. Also makes automated
+    // eval (eval/run.ts) able to check refusals with a simple string match.
+    `Jika jawabannya tidak ada di konteks, balas PERSIS dengan kalimat berikut dan jangan tambahkan kalimat lain: "${OUT_OF_SCOPE_ANSWER}"`,
+    "Jangan pernah mengarang jawaban yang tidak didukung oleh konteks.",
+    "Jawab singkat, jelas, dan dalam bahasa yang sama dengan pertanyaan pengguna (Indonesia atau Inggris) — kecuali untuk kalimat penolakan di atas, yang harus selalu persis seperti itu.",
   ].join(" ");
 
   return customPrompt?.trim() ? `${base}\n\nInstruksi tambahan dari pemilik bot: ${customPrompt.trim()}` : base;
