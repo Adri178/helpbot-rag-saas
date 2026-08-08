@@ -7,15 +7,15 @@ export function CreateChatbotForm() {
   const [state, formAction, pending] = useActionState(createChatbot, null);
 
   return (
-    <form action={formAction} className="flex items-end gap-2">
-      <label className="flex flex-col gap-1 text-sm">
+    <form action={formAction} className="flex flex-wrap items-end gap-2">
+      <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
         Nama chatbot
         <input
           type="text"
           name="name"
           required
           placeholder="mis. CS Toko Baju"
-          className="rounded border px-3 py-2"
+          className="w-full rounded border px-3 py-2"
         />
       </label>
       <button

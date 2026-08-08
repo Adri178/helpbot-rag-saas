@@ -35,7 +35,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-12">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-gray-600">{user?.email}</p>
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
         </form>
       </header>
 
-      <section className="flex items-center justify-between rounded border p-4">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded border p-4">
         <div className="text-sm">
           <p className="font-medium capitalize">Paket {plan}</p>
           <p className="text-gray-600">
