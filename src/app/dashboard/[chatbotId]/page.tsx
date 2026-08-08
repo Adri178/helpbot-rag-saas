@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UploadPdfForm } from "./UploadPdfForm";
 import { PasteTextForm } from "./PasteTextForm";
+import { TestChat } from "./TestChat";
 
 const STATUS_LABEL: Record<string, string> = {
   processing: "Memproses...",
@@ -85,6 +86,8 @@ export default async function ChatbotDetailPage({
           </div>
         )}
       </section>
+
+      <TestChat chatbotId={chatbotId} />
     </main>
   );
 }
