@@ -87,6 +87,10 @@ export async function POST(request: Request) {
       systemPrompt: chatbot.system_prompt,
     });
   } catch (err) {
+    // This endpoint is only reachable by the authenticated bot owner
+    // testing their own bot, so surfacing the real error (unlike the
+    // public endpoint) is useful for debugging.
+    console.error("chat answerQuestion failed:", err);
     return NextResponse.json(
       {
         error:

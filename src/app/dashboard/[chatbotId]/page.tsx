@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { UploadPdfForm } from "./UploadPdfForm";
 import { PasteTextForm } from "./PasteTextForm";
 import { TestChat } from "./TestChat";
+import { EmbedSnippet } from "./EmbedSnippet";
 
 const STATUS_LABEL: Record<string, string> = {
   processing: "Memproses...",
@@ -88,6 +89,7 @@ export default async function ChatbotDetailPage({
       </section>
 
       <TestChat chatbotId={chatbotId} />
+      <EmbedSnippet chatbotId={chatbotId} />
     </main>
   );
 }
