@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { answerQuestion } from "@/lib/chat/answer";
+import { checkMessageQuota, incrementUsage } from "@/lib/billing/usage";
 
 const MAX_QUESTION_CHARS = 2000;
 
@@ -51,6 +52,25 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Chatbot tidak ditemukan." },
       { status: 404 }
+    );
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+
+  const quota = await checkMessageQuota(supabase, {
+    ownerId: user.id,
+    plan: profile?.plan ?? null,
+  });
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: `Kuota pesan bulan ini (${quota.limit}) sudah habis untuk paket ${profile?.plan ?? "free"}. Upgrade ke Pro untuk kuota lebih besar.`,
+      },
+      { status: 402 }
     );
   }
 
@@ -112,6 +132,10 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  // Only counted after a successful answer, so failed/errored requests
+  // don't burn the owner's monthly quota.
+  await incrementUsage(supabase, user.id);
 
   return NextResponse.json({
     conversationId,

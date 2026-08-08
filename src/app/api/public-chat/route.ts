@@ -7,6 +7,7 @@ import {
   isRateLimited,
   RATE_LIMIT_IP_MAX_MESSAGES,
 } from "@/lib/chat/rateLimit";
+import { checkMessageQuota, incrementUsage } from "@/lib/billing/usage";
 
 const MAX_QUESTION_CHARS = 2000;
 
@@ -64,12 +65,31 @@ export async function POST(request: Request) {
 
   const { data: chatbot } = await supabase
     .from("chatbots")
-    .select("id, greeting, system_prompt")
+    .select("id, user_id, greeting, system_prompt")
     .eq("id", chatbotId)
     .single();
 
   if (!chatbot) {
     return json({ error: "Chatbot tidak ditemukan." }, 404);
+  }
+
+  // Quota belongs to the bot's owner (whose plan pays for it), not the
+  // anonymous visitor asking the question.
+  const { data: ownerProfile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", chatbot.user_id)
+    .single();
+
+  const quota = await checkMessageQuota(supabase, {
+    ownerId: chatbot.user_id,
+    plan: ownerProfile?.plan ?? null,
+  });
+  if (!quota.allowed) {
+    return json(
+      { error: "Bot ini sudah mencapai kuota pesan bulan ini." },
+      402
+    );
   }
 
   const recentCount = await countRecentMessages(supabase, {
@@ -164,6 +184,10 @@ export async function POST(request: Request) {
   if (assistantMsgError) {
     return json({ error: assistantMsgError.message }, 500);
   }
+
+  // Only counted after a successful answer, so failed/errored requests
+  // don't burn the owner's monthly quota.
+  await incrementUsage(supabase, chatbot.user_id);
 
   return json({
     conversationId,

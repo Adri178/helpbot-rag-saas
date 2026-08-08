@@ -15,7 +15,8 @@ RAG chatbot widget for their website. See PRD.md.
 - Google Gemini (free tier) for BOTH embeddings and generation (Gemini Flash),
   one API key. Match the `embedding` vector column dimension to the Gemini
   embedding model you choose. (Optional fast backup for generation: Groq.)
-- Stripe (test mode) for billing
+- Midtrans SNAP (sandbox mode) for billing — swapped from Stripe in Phase 6
+  at the user's request; see git history for the reasoning.
 - Deploy: Vercel + Supabase Cloud
 
 ## Working rules

@@ -1,15 +1,47 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { extractPdfText } from "@/lib/ingest/pdf";
 import { processDocument } from "@/lib/ingest/process";
+import { getPlanLimits } from "@/lib/billing/plans";
 
 export type DocumentFormState = { error: string } | null;
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024; // 5MB — cost guardrail, not the full
 // rate-limit/quota system built in Phase 5.
 const MAX_TEXT_CHARS = 50_000;
+
+/** Shared by both upload paths below. Returns an error message if the
+ * chatbot's owner (the caller — this action only runs in their own
+ * session) has hit their plan's per-chatbot document limit. */
+async function checkDocumentLimit(
+  supabase: SupabaseClient,
+  chatbotId: string
+): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "Unauthorized.";
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+  const { maxDocumentsPerChatbot } = getPlanLimits(profile?.plan);
+
+  const { count } = await supabase
+    .from("documents")
+    .select("id", { count: "exact", head: true })
+    .eq("chatbot_id", chatbotId);
+
+  if ((count ?? 0) >= maxDocumentsPerChatbot) {
+    return `Paket ${profile?.plan ?? "free"} dibatasi ${maxDocumentsPerChatbot} dokumen per chatbot. Upgrade ke Pro untuk lebih banyak.`;
+  }
+  return null;
+}
 
 export async function uploadPdfDocument(
   chatbotId: string,
@@ -28,6 +60,9 @@ export async function uploadPdfDocument(
   }
 
   const supabase = await createClient();
+
+  const limitError = await checkDocumentLimit(supabase, chatbotId);
+  if (limitError) return { error: limitError };
 
   // RLS's documents_insert_own policy re-checks that chatbotId actually
   // belongs to the signed-in user — this insert fails closed if a client
@@ -92,6 +127,9 @@ export async function addTextDocument(
   }
 
   const supabase = await createClient();
+
+  const limitError = await checkDocumentLimit(supabase, chatbotId);
+  if (limitError) return { error: limitError };
 
   const { data: document, error: insertError } = await supabase
     .from("documents")

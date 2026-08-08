@@ -44,8 +44,8 @@ Fokus MVP hanya pada alur inti. Fitur ekstra masuk "Non-goals" (bagian 7).
 - **e. Widget embeddable** — pengguna dapat potongan kode `<script>` untuk
   ditempel di website mereka; pengunjung bisa chat dari sana.
 - **f. Riwayat percakapan** — pengguna melihat percakapan yang terjadi di bot-nya.
-- **g. Billing sederhana** — paket Free vs Pro (Stripe mode test), dengan batas
-  jumlah bot / dokumen / pesan per bulan.
+- **g. Billing sederhana** — paket Free vs Pro (Midtrans SNAP sandbox), dengan
+  batas jumlah bot / dokumen / pesan per bulan.
 
 ---
 
@@ -95,7 +95,7 @@ Supabase, dan selalu filter query berdasarkan `user_id` / `chatbot_id`.
 - **Catatan privasi:** free tier Gemini bisa memakai input untuk melatih model
   Google — aman untuk demo/portofolio dengan data contoh. Untuk pelanggan
   sungguhan nanti, pindah ke tier berbayar demi privasi data.
-- **Billing:** Stripe (mode test)
+- **Billing:** Midtrans SNAP (sandbox mode)
 - **Deploy:** Vercel (app) + Supabase Cloud (database)
 - **Widget:** file JavaScript kecil yang di-embed lewat `<script>`
 
