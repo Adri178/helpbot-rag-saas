@@ -29,3 +29,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
 export function getPlanLimits(plan: string | null | undefined): PlanLimits {
   return PLAN_LIMITS[plan as Plan] ?? PLAN_LIMITS.free;
 }
+
+// Single source of truth for the Pro price so the landing page's pricing
+// section can never drift from what /api/midtrans/checkout actually
+// charges (test-mode sandbox amount, not a real market price).
+export const PRO_PLAN_PRICE_IDR = 15_000;

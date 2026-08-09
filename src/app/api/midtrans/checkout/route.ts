@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createSnapTransaction } from "@/lib/midtrans/client";
-
-// Test-mode price for the Pro plan (IDR, no decimals — Midtrans still
-// wants it as a number here; formatted to "X.00" by their API internally).
-const PRO_PLAN_GROSS_AMOUNT = 15_000;
+import { PRO_PLAN_PRICE_IDR } from "@/lib/billing/plans";
 
 /**
  * Creates a Midtrans Snap transaction (sandbox) for the signed-in user to
@@ -32,7 +29,7 @@ export async function POST(request: Request) {
   const { error: orderError } = await supabase.from("billing_orders").insert({
     order_id: orderId,
     user_id: user.id,
-    amount: PRO_PLAN_GROSS_AMOUNT,
+    amount: PRO_PLAN_PRICE_IDR,
   });
   if (orderError) {
     return NextResponse.json({ error: orderError.message }, { status: 500 });
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
   try {
     const snap = await createSnapTransaction({
       orderId,
-      grossAmount: PRO_PLAN_GROSS_AMOUNT,
+      grossAmount: PRO_PLAN_PRICE_IDR,
       customerEmail: user.email,
       finishRedirectUrl: `${origin}/dashboard?upgraded=1`,
     });
