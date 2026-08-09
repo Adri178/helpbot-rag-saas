@@ -62,3 +62,5 @@ RAG chatbot widget for their website. See PRD.md.
 - Group code by feature, not by type.
 - Environment variables in `.env.local` (never commit); document new ones in
   `.env.example`.
+
+"Jangan menambahkan baris Co-Authored-By atau 'Generated with Claude Code' di pesan commit."

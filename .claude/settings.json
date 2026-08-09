@@ -6,5 +6,9 @@
       "Bash(git commit -m ' *)",
       "Bash(node -e ' *)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
