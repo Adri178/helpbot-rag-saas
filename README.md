@@ -1,182 +1,220 @@
-# HelpBot — AI Support-Agent Builder
+# HelpBot
 
-Chatbot RAG multi-tenant: pemilik bisnis kecil upload dokumen (FAQ, katalog,
-panduan), dapat chatbot yang menjawab dari dokumen itu — lengkap dengan
-kutipan sumber, dan penolakan jujur kalau jawabannya tidak ada — lalu
-tempel satu baris `<script>` di website mereka.
+Bikin chatbot customer service dari dokumen bisnismu sendiri, tanpa coding.
+Upload FAQ atau katalog, lalu tempel satu baris `<script>` di website.
+Bot menjawab hanya dari dokumen itu, menyertakan kutipan sumbernya, dan
+bilang tidak tahu kalau memang tidak ada jawabannya.
 
-**Demo:** [helpbot-xi.vercel.app](https://helpbot-xi.vercel.app)
-**Coba tanpa daftar:** buka demo di atas, klik bubble chat di pojok kanan
-bawah.
-**Kode sumber:** [github.com/Adri178/helpbot](https://github.com/Adri178/helpbot)
+**[Coba demonya →](https://helpbot-xi.vercel.app)** (klik bubble chat di
+pojok kanan bawah, tidak perlu daftar)
+
+![Landing page HelpBot](docs/screenshots/landing.png)
 
 ---
 
-## Masalah
+## Masalah yang diselesaikan
 
-Bisnis kecil tidak punya waktu/uang untuk customer service 24 jam, dan
-pertanyaan pelanggan sering berulang (jam buka, kebijakan retur, cara
-pembayaran, dsb). Menjawab manual di WhatsApp/DM setiap saat tidak
-scalable.
+Toko online kecil dapat pertanyaan yang itu-itu saja: jam buka, ongkir,
+cara retur, bisa COD tidak. Menjawabnya satu per satu di WhatsApp sepanjang
+hari jelas tidak masuk akal, tapi menyewa CS 24 jam juga terlalu mahal.
 
-## Solusi
+Chatbot generik tidak menyelesaikan ini, karena dia tidak tahu kebijakan
+retur tokomu. Yang dibutuhkan adalah bot yang membaca dokumenmu.
 
-HelpBot membiarkan pemilik bisnis mengupload dokumen mereka sendiri, lalu
-sistem otomatis: ekstrak teks → potong jadi chunk → embed (Gemini) →
-simpan sebagai vektor di Postgres (pgvector). Saat pengunjung bertanya,
-sistem mencari chunk paling relevan, dan meminta model bahasa menjawab
-**hanya** berdasarkan chunk itu — bukan dari pengetahuan umum model.
+## Cara kerjanya
 
-Dua guardrail inti yang membuat ini bisa dipercaya, bukan cuma "demo yang
-kelihatan jalan":
-
-- **Grounding**: kalau tidak ada chunk relevan, bot menjawab "tidak ada di
-  data saya" — diverifikasi lewat [skrip evaluasi](#evaluasi) otomatis,
-  bukan cuma dicoba manual sekali.
-- **Isolasi tenant**: chatbot milik user A tidak pernah bisa mengambil
-  chunk milik user B. Dijaga di level database (Row Level Security),
-  bukan cuma dicek di kode aplikasi — lihat [Keamanan](#keamanan--isolasi-tenant).
-
-## Arsitektur
+Dokumen yang diupload dipecah jadi potongan kecil, diubah jadi vektor
+lewat Gemini, lalu disimpan di Postgres (pgvector). Saat pengunjung
+bertanya, pertanyaannya ikut diubah jadi vektor, dicocokkan dengan
+potongan yang paling mirip, dan hanya potongan itulah yang diberikan ke
+model bahasa sebagai bahan menjawab.
 
 ```
-Pengunjung website ──▶ widget.js (embed) ──▶ /api/public-chat
-                                                    │
-Pemilik bisnis ──▶ Dashboard (Next.js) ──▶ /api/chat
-                                                    │
-                                                    ▼
-                              embed pertanyaan (Gemini) ──▶ match_chunks() RPC
-                                                    │        (pgvector cosine search,
-                                                    │         scoped ke satu chatbot_id)
-                                                    ▼
-                              susun konteks + system prompt ──▶ Gemini Flash
-                                                    │
-                                                    ▼
-                              jawaban + sumber ──▶ disimpan ke conversations/messages
+Pengunjung ─▶ widget.js ─▶ /api/public-chat ─┐
+                                              ├─▶ embed pertanyaan (Gemini)
+Pemilik bot ─▶ Dashboard ─▶ /api/chat ────────┘             │
+                                                            ▼
+                                              match_chunks() — cosine search
+                                              pgvector, dikunci ke 1 chatbot
+                                                            │
+                                                            ▼
+                                              susun konteks + system prompt
+                                                            │
+                                                            ▼
+                                              Gemini Flash ─▶ jawaban + sumber
 ```
 
-**Pipeline ingest** (upload dokumen → siap dijawab):
+Pipeline saat upload dokumen:
 
 ```
-Upload (PDF/teks/FAQ) → ekstrak teks (unpdf) → chunk (paragraf+kalimat,
-dengan overlap) → embed batch (Gemini, gemini-embedding-001, 1536 dim)
-→ insert ke `chunks` → status dokumen: processing → ready
+PDF / teks / FAQ ─▶ ekstrak teks (unpdf) ─▶ potong per paragraf & kalimat
+                 ─▶ embed batch (gemini-embedding-001, 1536 dimensi)
+                 ─▶ simpan ke tabel chunks ─▶ status: processing → ready
 ```
+
+## Tampilan
+
+Dashboard untuk mengelola semua bot, dokumen, dan kode widget:
+
+![Dashboard daftar chatbot](docs/screenshots/dashboard.png)
+
+Setiap jawaban di kotak uji membawa potongan dokumen aslinya, jadi kamu
+bisa langsung cek jawabannya benar-benar bersumber dari mana:
+
+![Uji chat dengan kutipan sumber](docs/screenshots/uji-chat.png)
+
+Widget bisa diatur warna, posisi, dan sapaannya. Panel kanan bukan mockup:
+itu `widget.js` yang asli, jalan di dalam iframe dengan pengaturan yang
+baru disimpan, jadi yang kamu lihat persis seperti yang muncul di website
+pelanggan.
+
+![Pengaturan tampilan widget](docs/screenshots/widget-settings.png)
+
+Semua pertanyaan yang masuk terekam, termasuk yang ditolak bot. Yang
+ditolak justru berguna: itu daftar hal yang belum ada di dokumenmu.
+
+![Riwayat percakapan](docs/screenshots/percakapan.png)
+
+<details>
+<summary>Tampilan lainnya</summary>
+
+Kelola dokumen dan pantau status pemrosesannya:
+
+![Tab dokumen](docs/screenshots/dokumen.png)
+
+Pemakaian kuota bulanan dan performa jawaban per bot:
+
+![Halaman penggunaan](docs/screenshots/penggunaan.png)
+
+Widget yang sudah terpasang di sebuah website:
+
+![Widget di website](docs/screenshots/widget.png)
+
+Halaman masuk, dan tampilan dashboard di layar HP:
+
+<p>
+  <img src="docs/screenshots/login.png" alt="Halaman masuk" width="58%">
+  <img src="docs/screenshots/mobile-dashboard.png" alt="Dashboard di HP" width="20%">
+</p>
+
+</details>
 
 ## Tech stack
 
-| Lapisan | Teknologi | Kenapa |
+| Bagian | Pakai apa | Kenapa |
 | --- | --- | --- |
-| Frontend + API | Next.js 15 (App Router), TypeScript strict, Tailwind | Satu framework untuk UI + Server Actions + Route Handlers |
-| Database + Auth + Vector | Supabase (Postgres + pgvector) | Tiga kebutuhan dalam satu layanan, RLS bawaan Postgres |
-| Embedding + Generation | Google Gemini (`gemini-embedding-001`, `gemini-3.1-flash-lite`) | Free tier tanpa kartu kredit — lihat [catatan kuota](#catatan-jujur--batasan) |
-| Billing | Midtrans SNAP (sandbox) | Diganti dari rencana awal (Stripe) atas permintaan eksplisit saat Fase 6 |
-| Widget | Vanilla JS, tanpa dependency | Aman ditempel di website manapun, tidak bentrok CSS/JS host page |
-| Deploy | Vercel + Supabase Cloud | — |
+| Frontend + API | Next.js 15 (App Router), TypeScript, Tailwind | Satu framework untuk UI, Server Actions, dan API route |
+| Database, auth, vektor | Supabase (Postgres + pgvector) | Tiga kebutuhan dalam satu layanan, plus RLS bawaan Postgres |
+| Embedding + LLM | Gemini (`gemini-embedding-001`, `gemini-3.1-flash-lite`) | Ada free tier tanpa kartu kredit |
+| Pembayaran | Midtrans Snap (sandbox) | Gateway lokal, dukung transfer bank dan QRIS |
+| Widget | Vanilla JS, tanpa dependency | Tidak bentrok dengan CSS atau JS website yang memasangnya |
+| Deploy | Vercel + Supabase Cloud | |
 
-## Keamanan / isolasi tenant
+## Isolasi antar pengguna
 
-- Setiap tabel (`chatbots`, `documents`, `chunks`, `conversations`,
-  `messages`, `usage`, `billing_orders`) punya **Row Level Security**
-  aktif — user hanya bisa baca/tulis baris yang chatbot-nya dia miliki.
-- Endpoint chat publik (`/api/public-chat`, dipakai widget) tidak punya
-  sesi Supabase sama sekali (pengunjung anonim), jadi tidak bisa lewat
-  RLS. Solusinya **bukan** membuka RLS untuk role `anon` (itu akan
-  membiarkan siapapun yang tahu anon key — yang memang publik di widget —
-  query tabel `chunks` langsung lewat REST API Supabase dan lihat data
-  semua tenant). Endpoint itu pakai **service-role client** (kunci
-  server-only, tidak pernah ke browser), dan kode aplikasi sendiri yang
-  jadi satu-satunya penjaga isolasi: setiap query selalu difilter eksplisit
-  ke satu `chatbot_id`.
-- Pencarian similarity (`match_chunks` RPC) dibuat `SECURITY INVOKER` — di
-  jalur yang authenticated (dashboard test chat), RLS tetap jadi lapisan
-  pertahanan kedua di belakang filter eksplisit.
+Ini aplikasi multi-tenant, jadi bot milik A tidak boleh bisa membaca
+dokumen milik B. Penjaganya ada di dua tempat:
 
-## Guardrail biaya
+**Row Level Security di semua tabel.** `chatbots`, `documents`, `chunks`,
+`conversations`, `messages`, `usage`, dan `billing_orders` semuanya
+mengaktifkan RLS. Kalaupun ada bug di kode aplikasi yang lupa memfilter
+`user_id`, database tetap menolak.
 
-- Konteks yang dikirim ke LLM dibatasi ~6000 karakter, output dibatasi 500
-  token, `temperature: 0.2` (jawaban faktual, bukan kreatif).
-- Similarity di bawah ambang kasar (0.3) langsung dijawab fallback **tanpa
-  memanggil LLM sama sekali** — bot yang belum ada dokumennya tidak
-  membakar kuota API.
-- Rate limit dua lapis di endpoint publik: per `visitor_id` (10
-  pesan/5 menit) dan per IP (30 pesan/5 menit, menangkap visitor yang
-  clear localStorage untuk reset limit pertama).
-- Kuota bulanan per paket (Free: 1 bot / 3 dokumen per bot / 100
-  pesan bulan; Pro: 10 / 20 / 2000), dicek **sebelum** memanggil LLM dan
-  baru ditambah **setelah** jawaban sukses — request yang gagal/error
-  tidak memotong kuota.
+**Endpoint publik ditangani berbeda.** Widget dipakai pengunjung anonim
+yang tidak punya sesi Supabase, jadi RLS tidak bisa dipakai di sana.
+Solusinya bukan membuka RLS untuk role `anon` — kalau itu dilakukan,
+siapa pun yang membaca anon key dari widget (dan key itu memang publik)
+bisa query tabel `chunks` langsung lewat REST API Supabase dan melihat
+data semua tenant. Yang dipakai adalah service-role client yang kuncinya
+tidak pernah keluar dari server, dan kode aplikasi memfilter `chatbot_id`
+secara eksplisit di setiap query.
+
+## Menahan biaya API
+
+- Konteks ke LLM dibatasi ~6.000 karakter, output 500 token, temperature
+  0.2.
+- Kalau tidak ada potongan dokumen yang cukup mirip, bot langsung menjawab
+  "tidak ada di data saya" tanpa memanggil LLM sama sekali. Bot yang belum
+  diisi dokumen tidak membakar kuota.
+- Rate limit dua lapis di endpoint publik: 10 pesan per 5 menit per
+  pengunjung, dan 30 pesan per 5 menit per IP. Lapis kedua menangkap
+  pengunjung yang menghapus localStorage untuk mereset lapis pertama.
+- Kuota bulanan per paket dicek sebelum memanggil LLM, dan baru dihitung
+  setelah jawaban berhasil. Request yang gagal tidak memotong kuota.
 
 ## Evaluasi
 
-Diukur dengan [`eval/run.ts`](eval/run.ts) — skrip permanen (bukan
-sekali-jalan), 14 pertanyaan (9 in-scope, 5 out-of-scope) terhadap dokumen
-FAQ contoh, dijalankan lewat pipeline live (Supabase + Gemini asli).
-Jalankan lagi dengan `npm run eval`; hasil detail per pertanyaan ada di
+Grounding gampang diklaim tapi susah dibuktikan, jadi ada skrip yang
+mengukurnya: [`eval/run.ts`](eval/run.ts) membuat bot sementara dari
+dokumen contoh, menanyakan 14 pertanyaan lewat pipeline sungguhan
+(Supabase + Gemini, bukan mock), lalu menghitung skornya. Jalankan ulang
+dengan `npm run eval`; rincian per pertanyaan ada di
 [`eval/results.md`](eval/results.md).
 
-| Metrik | Hasil | Definisi |
+| Metrik | Hasil | Artinya |
 | --- | --- | --- |
-| Hit rate (retrieval) | **100%** (9 pertanyaan) | Chunk yang mengandung fakta yang ditanya benar-benar terambil |
-| Faithfulness | **100%** (9 pertanyaan) | Jawaban benar-benar memuat fakta dari chunk yang terambil |
-| Konsistensi penolakan | **100%** (5 pertanyaan) | Pertanyaan di luar dokumen selalu ditolak dengan kalimat baku yang sama |
+| Hit rate retrieval | **100%** (9 pertanyaan) | Potongan dokumen yang memuat jawabannya benar-benar terambil |
+| Faithfulness | **100%** (9 pertanyaan) | Jawaban memang memakai fakta dari potongan yang terambil |
+| Konsistensi penolakan | **100%** (5 pertanyaan) | Pertanyaan di luar dokumen selalu ditolak dengan kalimat yang sama |
 
-## Catatan jujur — batasan
+## Batasan yang diketahui
 
-Ditulis di sini alih-alih disembunyikan, karena bagian dari mengevaluasi
-sistem adalah tahu batasnya:
-
-- **Kuota gratis Gemini berubah-ubah per model.** Ditemukan saat menjalankan
-  `eval/run.ts`: alias `gemini-flash-latest` sempat menunjuk ke model
-  dengan kuota gratis 20 request/**hari** saja. Model generation dipatok
-  eksplisit ke `gemini-3.1-flash-lite` (bukan alias) supaya tidak diam-diam
-  bergeser ke model lain yang kuotanya kecil.
-- **Rate limit publik bisa dilewati** oleh visitor yang cukup niat clear
-  localStorage + ganti IP (mis. lewat VPN) — dua lapis guardrail (visitor +
-  IP) menaikkan biaya usaha, bukan menutup celah sepenuhnya.
-- **Billing Midtrans di sini one-time payment, bukan subscription
-  berulang** — tidak ada downgrade otomatis saat "langganan" berakhir
-  (karena memang tidak ada siklus langganan). Cukup untuk kriteria MVP
-  "upgrade test membuka kuota", belum untuk billing production sungguhan.
-- **Ambang similarity (0.3) belum di-tuning** dari data evaluasi skala
-  besar — pertahanan utama terhadap jawaban mengarang tetap instruksi
-  grounding di system prompt, bukan angka ambang ini.
-- **Free tier Gemini bisa memakai input untuk training model Google** —
-  aman untuk demo/portofolio dengan data contoh; pelanggan sungguhan perlu
-  pindah ke tier berbayar untuk privasi data.
+- **Kuota gratis Gemini beda-beda per model.** Ketahuan saat menjalankan
+  skrip evaluasi: alias `gemini-flash-latest` waktu itu mengarah ke model
+  yang jatah gratisnya cuma 20 request per hari. Karena itu model generasi
+  dipatok ke `gemini-3.1-flash-lite`, bukan alias, supaya tidak diam-diam
+  pindah ke model berkuota kecil.
+- **Rate limit publik masih bisa ditembus** pengunjung yang niat menghapus
+  localStorage sekaligus ganti IP. Dua lapis itu menyulitkan, bukan
+  menutup rapat.
+- **Pembayaran Midtrans di sini sekali bayar, bukan langganan berulang.**
+  Tidak ada downgrade otomatis karena memang tidak ada siklus langganan.
+  Cukup untuk membuktikan alur upgrade jalan, belum untuk billing
+  sungguhan.
+- **Ambang similarity 0.3 belum di-tuning** dari data besar. Yang benar-benar
+  menahan bot mengarang tetap instruksi grounding di system prompt, bukan
+  angka ini.
+- **Free tier Gemini boleh memakai input untuk melatih model Google.**
+  Aman untuk demo dengan data contoh, tapi kalau dipakai pelanggan
+  sungguhan perlu pindah ke tier berbayar.
 
 ## Menjalankan lokal
 
 ```bash
 npm install
-cp .env.example .env.local   # isi Supabase/Gemini/Midtrans keys
+cp .env.example .env.local   # isi kunci Supabase, Gemini, dan Midtrans
 npm run dev
 ```
 
-Migrasi database ada di `supabase/migrations/*.sql`, dijalankan manual di
-Supabase Dashboard → SQL Editor secara berurutan (0001 → 0005).
+Skema database ada di `supabase/migrations/`. Jalankan berurutan dari
+`0001` sampai `0006` lewat SQL Editor di dashboard Supabase.
 
 ```bash
-npm run lint     # ESLint
-npm run test     # Vitest — unit test pipeline chunking, retrieval, billing
-npm run eval     # evaluasi RAG end-to-end (biaya API sungguhan)
-npm run seed:demo  # buat/perbarui chatbot demo no-login
+npm run lint       # ESLint
+npm run test       # Vitest, unit test chunking / retrieval / billing
+npm run eval       # evaluasi RAG end-to-end (memakai kuota API sungguhan)
+npm run seed:demo  # buat chatbot demo untuk landing page
 ```
 
-## Struktur proyek
+## Struktur
 
 ```
-src/lib/ingest/    ekstraksi PDF, chunking, orkestrasi proses dokumen
-src/lib/gemini/    wrapper embedding + generation
-src/lib/chat/      retrieval, prompt, orkestrasi jawaban (dipakai dashboard & widget publik)
-src/lib/billing/   limit paket + pelacakan kuota bulanan
-src/lib/midtrans/  client Snap API + verifikasi signature webhook
-src/app/dashboard/ UI pemilik bisnis (buat bot, upload dokumen, uji chat, embed snippet)
-src/app/api/       route publik (chat, webhook billing)
-public/widget.js   widget embeddable, vanilla JS tanpa dependency
-eval/              dataset + skrip evaluasi RAG (permanen, hasil di-commit)
-supabase/migrations/  skema database + RLS, urut per fase
+src/lib/ingest/       ekstraksi PDF, chunking, orkestrasi proses dokumen
+src/lib/gemini/       wrapper embedding dan generation
+src/lib/chat/         retrieval, prompt, penyusun jawaban
+src/lib/billing/      batas paket dan pelacakan kuota bulanan
+src/lib/dashboard/    agregasi statistik untuk halaman dashboard
+src/lib/midtrans/     client Snap API dan verifikasi signature webhook
+src/lib/supabase/     client browser, server, dan service-role
+src/app/_landing/     komponen landing page
+src/app/dashboard/    UI pemilik bot: daftar, dokumen, uji chat, widget,
+                      percakapan, penggunaan, pengaturan
+src/app/api/          route chat (privat & publik) dan webhook Midtrans
+public/widget.js      widget embeddable, vanilla JS tanpa dependency
+eval/                 dataset dan skrip evaluasi RAG
+scripts/              seeder chatbot demo
+supabase/migrations/  skema database dan policy RLS
 ```
 
-Lihat [PRD.md](PRD.md) untuk spesifikasi produk lengkap dan
-[plan.md](plan.md) untuk urutan pembangunan per fase.
+Spesifikasi produk lengkap ada di [PRD.md](PRD.md), urutan pembangunannya
+di [plan.md](plan.md).
