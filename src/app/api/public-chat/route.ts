@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   const { data: chatbot } = await supabase
     .from("chatbots")
-    .select("id, user_id, greeting, system_prompt")
+    .select("id, user_id, greeting, system_prompt, show_sources")
     .eq("id", chatbotId)
     .single();
 
@@ -189,9 +189,12 @@ export async function POST(request: Request) {
   // don't burn the owner's monthly quota.
   await incrementUsage(supabase, chatbot.user_id);
 
+  // Sources are always stored (messages.sources above) so the owner's
+  // conversations/usage pages still have them — show_sources only
+  // controls whether the *public* widget response includes them.
   return json({
     conversationId,
     answer: result.answer,
-    sources: result.sources,
+    sources: chatbot.show_sources ? result.sources : [],
   });
 }

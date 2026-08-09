@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 
-export function UpgradeButton() {
+export function UpgradeButton({
+  className,
+  label = "Upgrade ke Pro",
+  pendingLabel = "Membuka checkout...",
+}: {
+  className?: string;
+  label?: string;
+  pendingLabel?: string;
+}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,16 +33,11 @@ export function UpgradeButton() {
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        onClick={handleUpgrade}
-        disabled={pending}
-        className="rounded bg-black px-3 py-2 text-sm text-white disabled:opacity-50"
-      >
-        {pending ? "Membuka checkout..." : "Upgrade ke Pro"}
+    <div className="flex flex-col gap-1">
+      <button type="button" onClick={handleUpgrade} disabled={pending} className={className}>
+        {pending ? pendingLabel : label}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="m-0 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

@@ -109,6 +109,52 @@ export async function uploadPdfDocument(
   return null;
 }
 
+/** RLS's documents_select/delete-via-owner-chatbot check applies here too
+ * (documents has no direct delete policy defined, but chunks cascade off
+ * documents via ON DELETE CASCADE at the FK level — deleting the parent
+ * document row via the owner's own client, scoped by chatbot_id, is
+ * sufficient). Confirmation happens client-side before this is called. */
+export async function deleteDocument(
+  chatbotId: string,
+  documentId: string
+): Promise<void> {
+  const supabase = await createClient();
+  await supabase
+    .from("documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("chatbot_id", chatbotId);
+  revalidatePath(`/dashboard/${chatbotId}`);
+}
+
+export type WidgetSettingsState = { error: string } | null;
+
+export async function updateWidgetSettings(
+  chatbotId: string,
+  _prevState: WidgetSettingsState,
+  formData: FormData
+): Promise<WidgetSettingsState> {
+  const accentColor = String(formData.get("accentColor") ?? "#0B7A6E");
+  const widgetPosition = formData.get("widgetPosition") === "left" ? "left" : "right";
+  const greeting = String(formData.get("greeting") ?? "").trim();
+  const showSources = formData.get("showSources") === "on";
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("chatbots")
+    .update({
+      accent_color: accentColor,
+      widget_position: widgetPosition,
+      greeting: greeting || null,
+      show_sources: showSources,
+    })
+    .eq("id", chatbotId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/${chatbotId}`);
+  return null;
+}
+
 export async function addTextDocument(
   chatbotId: string,
   _prevState: DocumentFormState,

@@ -1,10 +1,16 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "../(auth)/actions";
-import { CreateChatbotForm } from "./CreateChatbotForm";
-import { UpgradeButton } from "./UpgradeButton";
 import { getPlanLimits } from "@/lib/billing/plans";
-import { currentMonthKey } from "@/lib/billing/usage";
+import { getBotMessageStats, aggregateDocumentStatus } from "@/lib/dashboard/stats";
+import { PageHeader } from "./_shell/PageHeader";
+import { CreateChatbotCard } from "./CreateChatbotCard";
+import { BotCard } from "./BotCard";
+
+const STATUS_LABEL: Record<string, string> = {
+  ready: "Siap",
+  processing: "Memproses",
+  error: "Error",
+  empty: "Kosong",
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,7 +20,7 @@ export default async function DashboardPage() {
 
   const { data: chatbots } = await supabase
     .from("chatbots")
-    .select("id, name, created_at")
+    .select("id, name, created_at, documents(status)")
     .order("created_at", { ascending: false });
 
   const { data: profile } = await supabase
@@ -22,66 +28,38 @@ export default async function DashboardPage() {
     .select("plan")
     .eq("id", user?.id ?? "")
     .single();
-  const plan = profile?.plan ?? "free";
-  const limits = getPlanLimits(plan);
+  const limits = getPlanLimits(profile?.plan);
 
-  const { data: usageRow } = await supabase
-    .from("usage")
-    .select("message_count")
-    .eq("user_id", user?.id ?? "")
-    .eq("month", currentMonthKey())
-    .maybeSingle();
-  const messagesUsed = usageRow?.message_count ?? 0;
+  const stats = await getBotMessageStats(
+    supabase,
+    (chatbots ?? []).map((b) => b.id)
+  );
+
+  const bots = (chatbots ?? []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    status: aggregateDocumentStatus(b.documents ?? []),
+    statusLabel: STATUS_LABEL[aggregateDocumentStatus(b.documents ?? [])],
+    documentCount: (b.documents ?? []).length,
+    ...stats[b.id],
+  }));
+
+  const canCreateMore = bots.length < limits.maxChatbots;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-12">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="text-sm text-gray-600">{user?.email}</p>
+    <>
+      <PageHeader title="Semua chatbot" subtitle="Kelola bot, dokumen, dan widget dari satu tempat." />
+      <div className="flex-1 overflow-y-auto px-10 py-7">
+        <div className="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
+          {bots.map((bot) => (
+            <BotCard key={bot.id} bot={bot} />
+          ))}
+          <CreateChatbotCard
+            disabled={!canCreateMore}
+            limit={limits.maxChatbots}
+          />
         </div>
-        <form action={signOut}>
-          <button type="submit" className="rounded border px-3 py-2 text-sm">
-            Logout
-          </button>
-        </form>
-      </header>
-
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded border p-4">
-        <div className="text-sm">
-          <p className="font-medium capitalize">Paket {plan}</p>
-          <p className="text-gray-600">
-            {messagesUsed}/{limits.maxMessagesPerMonth} pesan bulan ini
-            {" · "}
-            {chatbots?.length ?? 0}/{limits.maxChatbots} chatbot
-          </p>
-        </div>
-        {plan === "free" && <UpgradeButton />}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium">Chatbot kamu</h2>
-        <CreateChatbotForm />
-
-        {chatbots && chatbots.length > 0 ? (
-          <ul className="divide-y rounded border">
-            {chatbots.map((bot) => (
-              <li key={bot.id}>
-                <Link
-                  href={`/dashboard/${bot.id}`}
-                  className="block px-4 py-3 hover:bg-gray-50"
-                >
-                  {bot.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="rounded border border-dashed py-16 text-center text-gray-600">
-            Belum ada chatbot.
-          </div>
-        )}
-      </section>
-    </main>
+      </div>
+    </>
   );
 }
