@@ -1,24 +1,7 @@
-import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanLimits } from "@/lib/billing/plans";
 import { currentMonthKey } from "@/lib/billing/usage";
-import { DashboardSidebar } from "./_shell/DashboardSidebar";
-
-// Same design-import fonts as the landing page (src/app/page.tsx),
-// scoped here too so the dashboard doesn't mix with the rest of the app's
-// Geist fonts from the root layout.
-const instrumentSans = Instrument_Sans({
-  variable: "--font-instrument-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
+import { DashboardSidebar, DashboardTopBar } from "./_shell/DashboardSidebar";
 
 export default async function DashboardLayout({
   children,
@@ -45,17 +28,20 @@ export default async function DashboardLayout({
     .eq("month", currentMonthKey())
     .maybeSingle();
 
+  const shellProps = {
+    email: user?.email ?? "",
+    plan,
+    messagesUsed: usageRow?.message_count ?? 0,
+    messagesLimit: limits.maxMessagesPerMonth,
+  };
+
   return (
-    <div
-      className={`${instrumentSans.variable} ${jetbrainsMono.variable} flex h-screen overflow-hidden bg-white text-[#0A0A0A] antialiased [font-family:var(--font-instrument-sans),Helvetica,sans-serif] [&_.font-mono]:[font-family:var(--font-jetbrains-mono),monospace]`}
-    >
-      <DashboardSidebar
-        email={user?.email ?? ""}
-        plan={plan}
-        messagesUsed={usageRow?.message_count ?? 0}
-        messagesLimit={limits.maxMessagesPerMonth}
-      />
-      <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+    <div className="flex h-screen overflow-hidden">
+      <DashboardSidebar {...shellProps} />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <DashboardTopBar {...shellProps} />
+        {children}
+      </div>
     </div>
   );
 }

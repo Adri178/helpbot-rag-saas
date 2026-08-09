@@ -23,12 +23,12 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Pengaturan" subtitle="Akun dan preferensi." />
-      <div className="flex-1 overflow-y-auto px-10 py-7">
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-7">
         <div className="flex max-w-[720px] flex-col gap-4.5">
           <div className="flex flex-col gap-4 rounded-[16px] border border-[#E7E7E4] p-6">
             <p className="m-0 text-[15px] font-semibold text-[#111]">Akun</p>
             <NameForm initialName={profile?.name ?? ""} />
-            <div className="grid grid-cols-[160px_1fr] items-center gap-x-4">
+            <div className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 sm:grid-cols-[160px_1fr]">
               <span className="text-[13px] text-[#71717A]">Email</span>
               <span className="rounded-[9px] border border-[#F0F0EE] bg-[#FAFAF9] px-3.5 py-2.5 text-sm text-[#8A8A94]">
                 {user?.email}

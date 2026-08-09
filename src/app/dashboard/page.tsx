@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="Semua chatbot" subtitle="Kelola bot, dokumen, dan widget dari satu tempat." />
-      <div className="flex-1 overflow-y-auto px-10 py-7">
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-7">
         <div className="grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
           {bots.map((bot) => (
             <BotCard key={bot.id} bot={bot} />

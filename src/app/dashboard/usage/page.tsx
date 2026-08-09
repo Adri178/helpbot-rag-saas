@@ -46,7 +46,7 @@ export default async function UsagePage() {
   return (
     <>
       <PageHeader title="Penggunaan" subtitle="Kuota dan performa jawaban bulan ini." />
-      <div className="flex-1 overflow-y-auto px-10 py-7">
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-7">
         <div className="flex flex-col gap-5.5">
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <div className="rounded-[14px] border border-[#E7E7E4] p-5">
@@ -106,7 +106,7 @@ export default async function UsagePage() {
           </div>
 
           {plan === "free" && (
-            <div className="flex items-center justify-between gap-4 rounded-[16px] bg-[#0A3D38] px-6 py-5.5">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-[16px] bg-[#0A3D38] px-6 py-5.5">
               <div>
                 <p className="m-0 text-base font-semibold text-white">
                   Naik ke Pro — kuota jauh lebih besar

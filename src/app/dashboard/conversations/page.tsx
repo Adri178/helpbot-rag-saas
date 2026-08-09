@@ -93,7 +93,7 @@ export default async function ConversationsPage({
         title="Percakapan"
         subtitle="Pertanyaan pengunjung dari semua chatbot-mu."
       />
-      <div className="flex-1 overflow-y-auto px-10 py-7">
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-7">
         <div className="mb-4 flex gap-2">
           {FILTERS.map((f) => (
             <Link
@@ -118,7 +118,11 @@ export default async function ConversationsPage({
             Belum ada percakapan.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[14px] border border-[#E7E7E4]">
+          // Fixed-width columns total ~410px, so the table scrolls sideways
+          // inside its own container rather than squashing the question
+          // text to one word per line on a phone.
+          <div className="overflow-x-auto rounded-[14px] border border-[#E7E7E4]">
+            <div className="min-w-[720px]">
             <div className="grid grid-cols-[1fr_180px_130px_100px] gap-2 border-b border-[#F0F0EE] bg-[#FAFAF9] px-5 py-3 font-mono text-[11px] tracking-[.08em] text-[#8A8A94] uppercase">
               <span>Pertanyaan pengunjung</span>
               <span>Chatbot</span>
@@ -149,6 +153,7 @@ export default async function ConversationsPage({
                 </span>
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>

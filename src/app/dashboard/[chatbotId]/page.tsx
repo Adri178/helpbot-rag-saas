@@ -40,7 +40,7 @@ export default async function ChatbotDetailPage({
         backHref="/dashboard"
         backLabel="Semua chatbot"
       />
-      <div className="flex-1 overflow-y-auto px-10 py-7">
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-7">
         <DetailTabs
           chatbotId={chatbotId}
           documents={documents ?? []}

@@ -45,7 +45,10 @@ export function DocsTab({
           <PasteTextForm chatbotId={chatbotId} />
         </div>
 
-        <div className="overflow-hidden rounded-[16px] border border-[#E7E7E4]">
+        {/* Scrolls sideways on narrow screens instead of crushing the
+            filename column (see the same pattern in conversations/page). */}
+        <div className="overflow-x-auto rounded-[16px] border border-[#E7E7E4]">
+          <div className="min-w-[560px]">
           <div className="grid grid-cols-[1fr_110px_130px_80px] gap-2 border-b border-[#F0F0EE] bg-[#FAFAF9] px-5 py-3 font-mono text-[11px] tracking-[.08em] text-[#8A8A94] uppercase">
             <span>Dokumen</span>
             <span>Tipe</span>
@@ -86,6 +89,7 @@ export function DocsTab({
               );
             })
           )}
+          </div>
         </div>
       </div>
 

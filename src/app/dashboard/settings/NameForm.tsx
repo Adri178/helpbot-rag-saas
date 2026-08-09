@@ -7,7 +7,10 @@ export function NameForm({ initialName }: { initialName: string }) {
   const [state, formAction, pending] = useActionState(updateName, null);
 
   return (
-    <form action={formAction} className="grid grid-cols-[160px_1fr] items-center gap-x-4 gap-y-3">
+    <form
+      action={formAction}
+      className="grid grid-cols-1 items-center gap-x-4 gap-y-1.5 sm:grid-cols-[160px_1fr] sm:gap-y-3"
+    >
       <span className="text-[13px] text-[#71717A]">Nama</span>
       <div className="flex items-center gap-2">
         <input
@@ -25,7 +28,9 @@ export function NameForm({ initialName }: { initialName: string }) {
           {pending ? "..." : "Simpan"}
         </button>
       </div>
-      {state?.error && <p className="col-span-2 m-0 text-sm text-red-600">{state.error}</p>}
+      {state?.error && (
+        <p className="m-0 text-sm text-red-600 sm:col-span-2">{state.error}</p>
+      )}
     </form>
   );
 }
