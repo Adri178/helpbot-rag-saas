@@ -1,3 +1,5 @@
+import { REPO_LINKS } from "./links";
+
 // Numbers below match eval/results.md (npm run eval), committed in the
 // repo — not marketing copy. Re-sync manually if the eval set changes.
 const STATS = [
@@ -34,7 +36,7 @@ export function LandingProof() {
             ))}
           </div>
           <a
-            href="https://github.com/Adri178/helpbot/blob/main/eval/results.md"
+            href={REPO_LINKS.evalResults}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-[#0B7A6E] underline underline-offset-2"

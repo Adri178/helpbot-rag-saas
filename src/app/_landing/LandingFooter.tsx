@@ -1,3 +1,5 @@
+import { REPO_LINKS } from "./links";
+
 const COLUMNS = [
   {
     title: "Produk",
@@ -10,9 +12,9 @@ const COLUMNS = [
   {
     title: "Sumber daya",
     links: [
-      { label: "Dokumentasi", href: "https://github.com/Adri178/helpbot#readme" },
+      { label: "Dokumentasi", href: REPO_LINKS.readme },
       { label: "Evaluasi RAG", href: "#bukti" },
-      { label: "Keamanan", href: "https://github.com/Adri178/helpbot#keamanan--isolasi-tenant" },
+      { label: "Keamanan", href: REPO_LINKS.security },
     ],
   },
 ];
